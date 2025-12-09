@@ -1,0 +1,19 @@
+spring:
+  profiles:
+    active: dev
+
+# Enables debug and upper logs ...
+#logging:
+#  level:
+#    net:
+#      engineerAnsh:
+#        journalApp: DEBUG
+
+# It disables all the logs for particular package or class...
+#logging:
+#  level:
+#    net:
+#      engineerAnsh:
+#        journalApp:
+#          Service:
+#            UserService: OFF

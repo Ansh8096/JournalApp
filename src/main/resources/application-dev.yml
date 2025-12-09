@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: "Journal Application"
+  redis:
+    url: ${REDIS_URI}
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+      database: journaldb
+      auto-index-creation: true
+
+# Because of this properties 'JavaMAilSender' object will get initialized...
+  mail:
+    host: smtp.gmail.com
+    port: 587 # In case when we used encryption...
+    username: ${EMAIL_USERNAME}
+    password: ${EMAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true # 'true' means data exchange will be encrypted...
+
+# Kafka Properties:--
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: weekly-sentiment-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted:
+              packages: net.engineerAnsh.journalApp.model
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    syntaxHighlight:
+      theme: Monokai
+
+# weather_API_KEY : ${WEATHER_API}
+
+weather:
+  API:
+    Key: ${WEATHER_API}
+
+#    servlet :
+#      context-path: /Journal
