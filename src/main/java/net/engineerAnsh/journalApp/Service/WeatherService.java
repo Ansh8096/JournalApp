@@ -39,10 +39,10 @@ public class WeatherService {
             HttpStatusCode statusCode = response.getStatusCode();// It gives us the HttpCode ,which we get by hitting this API...
             if (response.hasBody()) {
                 WeatherResponse body = response.getBody();
-                redisService.set("weather_of_" + city, body, 300l);
+                redisService.set("weather_of_" + city, body, 600l);
                 return body;
             }
-            if(statusCode.is4xxClientError() || statusCode.is4xxClientError() || statusCode.is5xxServerError() ){
+            if(statusCode.is4xxClientError() || statusCode.is5xxServerError()){
                 log.error("Error occurred while getting the weather...");
             }
             return null;

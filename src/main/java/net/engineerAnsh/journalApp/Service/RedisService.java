@@ -18,6 +18,9 @@ public class RedisService {
         try {
             Object o = redisTemplate.opsForValue().get(city);
             // Down here we are converting the Object 'o' into the required response(here i.e: 'WeatherResponse') which we want to return...
+            if (o == null) {
+                return null;
+            }
             ObjectMapper mapper = new ObjectMapper();
             return mapper.readValue(o.toString(),entityClass);
         } catch (Exception e) {
