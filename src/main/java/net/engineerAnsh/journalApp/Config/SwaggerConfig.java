@@ -21,9 +21,9 @@ public class SwaggerConfig {
                         title("Journal APP API's")
                         .description("By Ansh")
                 ).servers(List.of(
-                        new Server().url("http://localhost:8080").description("Local"),
-                        new Server().url("http://localhost:8081").description("Live"))
-                ) .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                        new Server().url("http://localhost:8080").description("Local Server"),
+                        new Server().url("https://journalapp-p6ur.onrender.com").description("Production Server"))
+                ).addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components().addSecuritySchemes("bearerAuth",
                         new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)
