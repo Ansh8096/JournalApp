@@ -3,6 +3,7 @@ package net.engineerAnsh.journalApp.Service;
 import net.engineerAnsh.journalApp.Entity.User;
 import net.engineerAnsh.journalApp.Repository.UserRepository;
 import net.engineerAnsh.journalApp.Utils.JwtUtils;
+import net.engineerAnsh.journalApp.enums.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -69,10 +70,10 @@ public class GoogleAuthService {
                     // we are creating the new User, if it was not present...
                     User user = new User();
                     user.setEmail(email);
-                    user.setUserName(email);
-                    user.setRoles(List.of("USER"));
+                    user.setUsername(email);
+                    user.setRoles(List.of(Role.USER));
                     user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString())); // this generates a random password...
-                    user.setJournalEntries(new ArrayList<>());
+                    user.setJournals(new ArrayList<>());
                     userRepository.save(user); // saving user...
                 }
 
