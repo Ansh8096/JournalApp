@@ -11,7 +11,7 @@ public class SentimentConsumerService {
     @Autowired
     private  EmailService emailService;
 
-//    @KafkaListener(topics = "weekly-sentiments",groupId ="weekly-sentiment-group")
+//    @KafkaListener(topics = "weekly-sentiments",groupId ="weekly-mood-group")
     public void consume(SentimentData sentimentData){
         System.out.println(" Received SentimentData: " + sentimentData);
         sendingEmail(sentimentData);
@@ -19,6 +19,6 @@ public class SentimentConsumerService {
 
 
     public void sendingEmail(SentimentData sentimentData){
-        emailService.sendingEmail(sentimentData.getEmail(),"Sentiment for last 7 days ", sentimentData.getSentiment());
+        emailService.sendingEmail(sentimentData.getEmail(),"Mood for last 7 days ", sentimentData.getSentiment());
     }
 }

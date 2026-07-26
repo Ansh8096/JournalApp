@@ -2,75 +2,105 @@ package net.engineerAnsh.journalApp.Controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import net.engineerAnsh.journalApp.Entity.User;
-import net.engineerAnsh.journalApp.Repository.JournalEntryRepository;
-import net.engineerAnsh.journalApp.Repository.UserRepository;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import net.engineerAnsh.journalApp.Dto.auth.AuthResponseDto;
+import net.engineerAnsh.journalApp.Dto.common.MessageResponseDto;
+import net.engineerAnsh.journalApp.Dto.user.*;
 import net.engineerAnsh.journalApp.Service.UserService;
-import net.engineerAnsh.journalApp.Service.WeatherService;
-import net.engineerAnsh.journalApp.api.responses.WeatherResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController // @RestController: Marks this as a REST controller — meaning it will handle HTTP requests and automatically convert Java objects to JSON in responses...
-@RequestMapping("/Users")
-@Tag(name = "User APIs" , description = "Read, Update & Delete User")
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/users")
+@Tag(name = "User APIs", description = "Read, Update & Delete User")
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @Autowired
-    private JournalEntryRepository journalEntryRepository;
+    @GetMapping("/me")
+    @Operation(summary = "Get the user")
+    public ResponseEntity<UserProfileResponseDto> getUser() {
+        UserProfileResponseDto user = userService.getUser();
+        return ResponseEntity.ok(user);
+    }
 
-    @PutMapping
+    @PatchMapping("/me")
     @Operation(summary = "Update the current user")
-    public ResponseEntity<?> updateUserEntry(@RequestBody User user){
-        Authentication userAuthenticated = SecurityContextHolder.getContext().getAuthentication(); // whenever a user gets authenticated , it's details get stored in 'SecurityContextHolder'...
-        String userName  = userAuthenticated.getName(); // Extracts the username (the one used to log in)...
-        User userInDb = userService.findByUserName(userName); // getting the user by its userName...
-        if(!user.getUserName().isEmpty()) {
-            userInDb.setUserName(user.getUserName());
-        }
-        if(!user.getPassword().isEmpty()) {
-            userInDb.setPassword(user.getPassword());
-        }
-        userService.saveNewUser(userInDb);
-        return new ResponseEntity<>(userInDb,HttpStatus.NO_CONTENT);
+    public ResponseEntity<MessageResponseDto> updateUser(
+            @RequestBody @Valid UpdateProfileRequestDto request
+    ) {
+        userService.updateUser(request);
+        return ResponseEntity.ok(
+                MessageResponseDto.builder()
+                        .message("User updated successfully.").build()
+        );
     }
 
-    @Autowired
-    private UserRepository userRepository;
+    @PatchMapping("/me/password")
+    public ResponseEntity<MessageResponseDto> changePassword(
+            @Valid @RequestBody ChangePasswordRequestDto request
+    ){
+        userService.changePassword(request);
 
-    @DeleteMapping
-    @Operation(summary = "Delete the current user")
-    public ResponseEntity<?> DeleteUserById(){
-        Authentication userAuthenticated = SecurityContextHolder.getContext().getAuthentication(); // Again, 'SecurityContextHolder.getContext().getAuthentication() '-> gives the current logged-in user...
-        String userName = userAuthenticated.getName();
-        User user = userService.findByUserName(userName);
-        user.getJournalEntries().forEach(entry -> journalEntryRepository.deleteById(entry.getId()));
-        userRepository.deleteByUserName(userName);// Deletes the user directly from MongoDB using their username...
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok(
+                MessageResponseDto.builder()
+                        .message("Password updated successfully.").build()
+        );
     }
 
-    @Autowired
-    private WeatherService weatherService;
+    @PatchMapping("/me/email")
+    public ResponseEntity<MessageResponseDto> changeEmail(
+            @Valid @RequestBody ChangeEmailRequestDto request
+    ){
+        userService.changeEmail(request);
+        return ResponseEntity.ok(
+                MessageResponseDto.builder()
+                        .message("Email updated successfully.").build()
+        );
+    }
 
-    @GetMapping
+    @PatchMapping("/me/username")
+    public ResponseEntity<AuthResponseDto> changeUsername(
+            @Valid @RequestBody ChangeUsernameRequestDto request
+    ){
+        return ResponseEntity.ok(userService.changeUsername(request));
+    }
+
+    @DeleteMapping("/me")
+    @Operation(summary = "Delete the user")
+    public ResponseEntity<MessageResponseDto> deleteTheUser(
+            @Valid @RequestBody DeleteAccountRequestDto request
+    ) {
+        userService.deleteTheUser(request);
+        return ResponseEntity.ok(
+                MessageResponseDto.builder()
+                        .message("User deleted successfully.").build()
+        );    }
+
+    @PatchMapping(
+            value = "me/profile-image",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @Operation(summary = "Upload or replace the user's profile image")
+    public ResponseEntity<ProfileImageResponseDto> uploadProfileImage(
+            @RequestParam("image") MultipartFile image
+    ) {
+
+        return ResponseEntity.ok(
+                userService.uploadProfileImage(image)
+        );
+
+    }
+
+    @GetMapping("me/greet")
     @Operation(summary = "Greetings from the user")
-    public ResponseEntity<?> greetingsByUser(){
-        Authentication userAuthenticated = SecurityContextHolder.getContext().getAuthentication();
-        String name = userAuthenticated.getName();
-        String userCity = userService.findByUserName(name).getCity();
-        WeatherResponse weatherResponse = weatherService.getWeather(userCity);
-        String greeting = "";
-        if(weatherResponse != null){
-           greeting = " weather feels like " + weatherResponse.getCurrent().getFeelsLike();
-        }
-        return new ResponseEntity<>("Hi " + name + greeting ,HttpStatus.OK);
+    public ResponseEntity<?> greetingsByUser() {
+        String greeted = userService.greetTheUser();
+        return new ResponseEntity<>(greeted, HttpStatus.OK);
     }
 }
-
