@@ -1,7 +1,6 @@
 package net.engineerAnsh.journalApp.Entity;
 
 import lombok.Data;
-
 import lombok.NoArgsConstructor;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -11,5 +10,4 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class ConfigJournalAppEntity {
     private String Key;
     private String Value;
-
 }

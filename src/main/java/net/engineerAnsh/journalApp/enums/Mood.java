@@ -1,8 +1,6 @@
 package net.engineerAnsh.journalApp.enums;
 
-public enum Sentiment {
-    HAPPY,
-    SAD,
-    ANXIOUS,
-    ANGRY
+public enum Mood {
+    HAPPY, SAD, ANXIOUS, ANGRY, CALM, EXCITED, NEUTRAL, GRATEFUL, STRESSED
+
 }
