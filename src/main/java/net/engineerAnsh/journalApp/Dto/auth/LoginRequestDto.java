@@ -1,7 +1,7 @@
-package net.engineerAnsh.journalApp.Dto;
+package net.engineerAnsh.journalApp.Dto.auth;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,13 +9,13 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginDto {
+public class LoginRequestDto {
 
-    @NotEmpty
+    @NotBlank(message = "Username is required")
     @Schema(description = "The user's username")
-    private String userName;
+    private String username;
 
-    @NotEmpty
+    @NotBlank(message = "Password is required")
     @Schema(description = "The user's password")
     private String password;
 }
