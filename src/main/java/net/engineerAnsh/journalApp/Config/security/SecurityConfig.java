@@ -1,4 +1,4 @@
-package net.engineerAnsh.journalApp.Config;
+package net.engineerAnsh.journalApp.Config.security;
 
 import net.engineerAnsh.journalApp.Filter.JwtFilter;
 import net.engineerAnsh.journalApp.Service.UserDetailsServiceImpl;

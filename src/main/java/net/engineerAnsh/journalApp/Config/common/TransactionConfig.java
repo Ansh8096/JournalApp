@@ -1,4 +1,4 @@
-package net.engineerAnsh.journalApp.Config;
+package net.engineerAnsh.journalApp.Config.common;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

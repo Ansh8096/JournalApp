@@ -1,4 +1,4 @@
-package net.engineerAnsh.journalApp.Config;
+package net.engineerAnsh.journalApp.Config.swagger;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;

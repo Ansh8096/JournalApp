@@ -16,7 +16,6 @@ COPY src ./src
 # Package the application (skips tests)
 RUN mvn clean package -DskipTests
 
-
 # -------------------------------
 #       RUN STAGE
 # -------------------------------
