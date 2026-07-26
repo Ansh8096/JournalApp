@@ -2,10 +2,8 @@ package net.engineerAnsh.journalApp.Services;
 
 import net.engineerAnsh.journalApp.Entity.User;
 import net.engineerAnsh.journalApp.Repository.UserRepository;
-import net.engineerAnsh.journalApp.Service.UserService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +34,8 @@ public class UserServiceTest {
     @Autowired
     UserRepository userRepository; // these will only get inject by springBoot during runTime, so we should run this file for our tests to work smoothly...
 
+
+
     @Disabled // It disables the test...
     @Test
     public void testAdd(){
@@ -51,15 +51,15 @@ public class UserServiceTest {
             "Shyam"
     })
     public void testByUsername(String name){
-        assertNotNull(userRepository.findByUserName(name),"Message failed for : " + name);
+        assertNotNull(userRepository.findByUsername(name),"Message failed for : " + name);
     }
 
 
     @Disabled
     @Test
     public void testForJournalEntries(){
-        User user = userRepository.findByUserName("AnshVerma");
-        assertTrue(!user.getJournalEntries().isEmpty()); // it will tell us if there is journal entries present or not...
+        User user = userRepository.findByUsername("AnshVerma");
+        assertTrue(!user.getJournals().isEmpty()); // it will tell us if there is journal entries present or not...
     }
 
 
@@ -75,14 +75,4 @@ public class UserServiceTest {
         assertEquals(expected,a+b);
     }
 
-
-    @Autowired
-    UserService userService;
-
-    @Disabled
-    @ParameterizedTest
-    @ArgumentsSource(UserArgumentProvider.class) // This tells 'JUnit' to get the input values from a custom provider class named UserArgumentProvider...
-    public void testSavingTheUser(User user){
-        assertTrue(userService.testingSaveNewUser(user));
-    }
 }

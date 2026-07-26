@@ -1,6 +1,5 @@
 package net.engineerAnsh.journalApp.Services;
 
-import net.bytebuddy.asm.MemberSubstitution;
 import net.engineerAnsh.journalApp.Entity.User;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
@@ -16,9 +15,9 @@ public class UserArgumentProvider implements ArgumentsProvider {
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
         return Stream.of(
-                Arguments.of(User.builder().userName("Priya").password("Priya").build()), // his creates a stream of User objects using the builder pattern, Each 'Arguments.of()' wraps a User object...
-                Arguments.of(User.builder().userName("Shreya").password("Shreya").build()),
-                Arguments.of(User.builder().userName("Anamika").password("").build())
+                Arguments.of(User.builder().username("Priya").password("Priya").build()), // his creates a stream of User objects using the builder pattern, Each 'Arguments.of()' wraps a User object...
+                Arguments.of(User.builder().username("Shreya").password("Shreya").build()),
+                Arguments.of(User.builder().username("Anamika").password("").build())
         );
     }
 }

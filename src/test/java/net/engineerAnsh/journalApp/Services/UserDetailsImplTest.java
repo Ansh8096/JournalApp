@@ -42,7 +42,7 @@ public class UserDetailsImplTest {
     @Test
     public void loadUserByUsernameTest(){
         // 'ArgumentMatchers.anyString()' It means return the particular created user when it is called for any String (i.e "Ram","Shyam" etc) ...
-        when(userRepository.findByUserName(ArgumentMatchers.anyString())).thenReturn(User.builder().userName("Ram").password("asdfghjk").roles(new ArrayList<>()).build());
+        when(userRepository.findByUsername(ArgumentMatchers.anyString())).thenReturn(User.builder().username("Ram").password("asdfghjk").roles(new ArrayList<>()).build());
         UserDetails user = userDetailsService.loadUserByUsername("ram");
         Assertions.assertNotNull(user);
     }

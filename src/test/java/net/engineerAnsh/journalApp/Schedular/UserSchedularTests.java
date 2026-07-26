@@ -32,7 +32,7 @@ public class UserSchedularTests {
 //    void testKafkaSend() {
 //        SentimentData data = SentimentData.builder()
 //                .email("anshv8096@gmail.com")
-//                .sentiment("Feeling great this week!")
+//                .mood("Feeling great this week!")
 //                .build();
 //        kafkaTemplate.send("weekly-sentiments", data.getEmail(), data);
 //    }
