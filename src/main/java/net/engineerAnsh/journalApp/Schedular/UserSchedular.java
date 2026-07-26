@@ -2,11 +2,11 @@ package net.engineerAnsh.journalApp.Schedular;
 
 import lombok.extern.slf4j.Slf4j;
 import net.engineerAnsh.journalApp.Cache.AppCache;
-import net.engineerAnsh.journalApp.Entity.JournalEntries;
+import net.engineerAnsh.journalApp.Entity.Journal;
 import net.engineerAnsh.journalApp.Entity.User;
 import net.engineerAnsh.journalApp.Repository.UserRepositoryImpl;
 import net.engineerAnsh.journalApp.Service.EmailService;
-import net.engineerAnsh.journalApp.enums.Sentiment;
+import net.engineerAnsh.journalApp.enums.Mood;
 import net.engineerAnsh.journalApp.model.SentimentData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -35,37 +35,37 @@ public class UserSchedular {
     public void fetchUsersAndSendSaMail() {
         List<User> Users = userRepository.getUserForSA();
         for(User user : Users){
-            List<JournalEntries> journalEntries = user.getJournalEntries();
-            List<Sentiment> sentimentsList = journalEntries.stream()
-                    .filter(x -> x.getDate()
+            List<Journal> journalEntries = user.getJournals();
+            List<Mood> moodList = journalEntries.stream()
+                    .filter(x -> x.getCreatedAt()
                             .isAfter(LocalDateTime.now()
                                     .minus(7, ChronoUnit.DAYS)))
-                    .map(x -> x.getSentiment())
+                    .map(x -> x.getMood())
                     .toList();
 
             // We will be mapping all the sentiments present in the journal entries with their frequency into a map...
-            Map<Sentiment,Integer> mppOfSentiments = new HashMap<>();
-            for(Sentiment sentiment : sentimentsList){
-                if(sentiment != null){
-                    mppOfSentiments.put(sentiment,mppOfSentiments.getOrDefault(sentiment,0)+1);
+            Map<Mood,Integer> mppOfSentiments = new HashMap<>();
+            for(Mood mood : moodList){
+                if(mood != null){
+                    mppOfSentiments.put(mood,mppOfSentiments.getOrDefault(mood,0)+1);
                 }
             }
 
-            // We will be storing the sentiment that has maximum frequency the user's journal entries...
+            // We will be storing the mood that has maximum frequency the user's journal entries...
             int maxCount = 0;
-            Sentiment mostFrequentSentiment = null;
-            for(Map.Entry<Sentiment, Integer> sentimentInMap : mppOfSentiments.entrySet()){
+            Mood mostFrequentMood = null;
+            for(Map.Entry<Mood, Integer> sentimentInMap : mppOfSentiments.entrySet()){
                 if(sentimentInMap.getValue() > maxCount){
                     maxCount = sentimentInMap.getValue();
-                    mostFrequentSentiment = sentimentInMap.getKey();
+                    mostFrequentMood = sentimentInMap.getKey();
                 }
             }
 
-            // we are sending mail to the user about their highest frequency sentiment...
-            if(mostFrequentSentiment != null){
-                // emailService.sendingEmail(user.getEmail(), "Sending the sentiment for last 7 days", mostFrequentSentiment.toString());
+            // we are sending mail to the user about their highest frequency mood...
+            if(mostFrequentMood != null){
+                // emailService.sendingEmail(user.getEmail(), "Sending the mood for last 7 days", mostFrequentMood.toString());
 
-                SentimentData sentimentData = SentimentData.builder().email(user.getEmail()).sentiment("Sentiment for last 7 days " + mostFrequentSentiment).build();
+                SentimentData sentimentData = SentimentData.builder().email(user.getEmail()).sentiment("Mood for last 7 days " + mostFrequentMood).build();
 
                 // We will be sending mail synchronously if kafka throws an error...
                 try {
@@ -73,7 +73,7 @@ public class UserSchedular {
                     System.out.println("Serializer: " + kafkaTemplate);
                 } catch (Exception e) {
                     log.info("kafka is not active, mail is send synchronously...");
-                    emailService.sendingEmail(sentimentData.getEmail(),"Sentiment for last 7 days ", sentimentData.getSentiment());
+                    emailService.sendingEmail(sentimentData.getEmail(),"Mood for last 7 days ", sentimentData.getSentiment());
                 }
             }
         }
