@@ -10,7 +10,6 @@ import net.engineerAnsh.journalApp.Entity.User;
 import net.engineerAnsh.journalApp.Repository.JournalRepository;
 import net.engineerAnsh.journalApp.Repository.UserRepository;
 import net.engineerAnsh.journalApp.Utils.JwtUtils;
-import net.engineerAnsh.journalApp.api.responses.WeatherResponse;
 import net.engineerAnsh.journalApp.enums.Role;
 import net.engineerAnsh.journalApp.exception.exceptions.DuplicateResourceException;
 import net.engineerAnsh.journalApp.exception.exceptions.ResourceNotFoundException;
@@ -24,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,7 +30,6 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final JournalRepository journalRepository;
-    private final WeatherService weatherService;
     private final PasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
     private final JwtUtils jwtUtils;
@@ -65,7 +62,7 @@ public class UserService {
         );
     }
 
-    public void saveEntry(User user) {
+    public void saveUser(User user) {
         userRepository.save(user);
     }
 
@@ -240,20 +237,6 @@ public class UserService {
         userRepository.save(savedUser);
     }
 
-    public String greetTheUser() {
-        String name = getLoggedInUser();
-        User user = findUserByUserName(name);
-        if (user == null) throw new ResourceNotFoundException("User not Found");
-
-        String city = user.getCity();
-        WeatherResponse weatherResponse = weatherService.getWeather(city);
-        String greeting = "";
-        if (weatherResponse != null) {
-            greeting = "Hi " + name + " weather feels like " + weatherResponse.getCurrent().getFeelsLike() + " in " + city;
-        }
-        return greeting;
-    }
-
     public UserProfileResponseDto getUser() {
         String username = getLoggedInUser();
         return mapToUserProfileResponse(findUserByUserName(username));
@@ -283,7 +266,7 @@ public class UserService {
         user.setProfileImagePublicId(uploadResponse.getPublicId());
 
         // Save the updated user
-        saveEntry(user);
+        saveUser(user);
 
         // Delete the previous image after everything else succeeds
         if (oldPublicId != null && !oldPublicId.isBlank()) {
@@ -302,4 +285,5 @@ public class UserService {
                 .profileImageUrl(uploadResponse.getImageUrl())
                 .build();
     }
+
 }
