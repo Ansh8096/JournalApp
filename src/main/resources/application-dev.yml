@@ -1,17 +1,19 @@
 spring:
   application:
     name: "Journal Application"
-  redis:
-    host: ${REDIS_HOST}
-    port: ${REDIS_PORT}
-    password: ${REDIS_PASSWORD}
-    ssl: true
-
   data:
     mongodb:
       uri: ${MONGODB_URI}
       database: journaldb
       auto-index-creation: true
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: true
+
 
   # Because of this properties 'JavaMAilSender' object will get initialized...
   mail:
@@ -63,10 +65,6 @@ springdoc:
     syntaxHighlight:
       theme: Monokai
 
-weather:
-  API:
-    Key: ${WEATHER_API}
-
 app:
   cors:
     allowed-origin: ${ALLOWED_ORIGIN}
@@ -81,3 +79,17 @@ cloudinary:
   profile-image-folder: ${CLOUDINARY_PROFILE_IMAGE_FOLDER}
   journal-image-folder: ${CLOUDINARY_JOURNAL_IMAGE_FOLDER}
 
+journal:
+  tags:
+    max-count: 10
+    max-length: 30
+
+weather:
+  openweather:
+    base-url: https://api.openweathermap.org/data/2.5/weather
+    geocoding-url: https://api.openweathermap.org/geo/1.0/direct
+    api-key: ${OPENWEATHER_API_KEY}
+    units: metric
+    temperature-unit: "°C"
+    wind-speed-unit: "m/s"
+    cache-ttl-seconds: 600

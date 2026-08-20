@@ -1,78 +1,249 @@
 package net.engineerAnsh.journalApp.Service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.engineerAnsh.journalApp.Cache.AppCache;
-import net.engineerAnsh.journalApp.Constants.Placeholders;
-import net.engineerAnsh.journalApp.api.responses.WeatherResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import net.engineerAnsh.journalApp.Config.weather.WeatherProperties;
+import net.engineerAnsh.journalApp.Dto.user.UserProfileResponseDto;
+import net.engineerAnsh.journalApp.Dto.weather.WeatherResponseDto;
+import net.engineerAnsh.journalApp.api.clients.weather.OpenWeatherClient;
+import net.engineerAnsh.journalApp.api.responses.Weather.GeocodingResponse;
+import net.engineerAnsh.journalApp.api.responses.Weather.OpenWeatherCondition;
+import net.engineerAnsh.journalApp.api.responses.Weather.OpenWeatherResponse;
+import net.engineerAnsh.journalApp.exception.exceptions.BadRequestException;
+import net.engineerAnsh.journalApp.exception.exceptions.ResourceNotFoundException;
+import net.engineerAnsh.journalApp.exception.exceptions.WeatherServiceException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Locale;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class WeatherService {
 
-    @Value("${weather.API.Key}")
-    private String apiKey; // we can't use static here , ...
+    private final OpenWeatherClient openWeatherClient;
+    private final RedisService redisService;
+    private final WeatherProperties weatherProperties;
+    private final UserService userService;
+    private static final String WEATHER_CACHE_PREFIX = "weather:v1:";
 
-    @Autowired
-    private RestTemplate restTemplate; // RestTemplate is used to hit the external API's...
 
-    @Autowired
-    private AppCache appCacheClass;
+    public WeatherResponseDto getWeather() {
 
-    @Autowired
-    private RedisService redisService;
+        UserProfileResponseDto user = userService.getUser();
 
-    public WeatherResponse getWeather(String city) {
+        String city =
+                user.getCity();
 
-        WeatherResponse weatherResponseByRedis = redisService.get("weather_of_" + city, WeatherResponse.class);
-        if (weatherResponseByRedis != null) {
-            return weatherResponseByRedis;
+        if (city == null ||
+                city.isBlank()) {
+
+            throw new BadRequestException(
+                    "Please set your city before requesting weather."
+            );
         }
-        else {
-            String weatherApi = AppCache.Keys.WEATHER_API.toString();
-            String finalAPI = appCacheClass.getAppCache().get(weatherApi).replace(Placeholders.ApiKey, apiKey).replace(Placeholders.City, city);
-            ResponseEntity<WeatherResponse> response = restTemplate.exchange(finalAPI, HttpMethod.GET, null, WeatherResponse.class); // here 'WeatherResponse' is an POJO class for the Json that I will get (after hitting thr API)...
-            HttpStatusCode statusCode = response.getStatusCode();// It gives us the HttpCode ,which we get by hitting this API...
-            if (response.hasBody()) {
-                WeatherResponse body = response.getBody();
-                redisService.set("weather_of_" + city, body, 600l);
-                return body;
-            }
-            if(statusCode.is4xxClientError() || statusCode.is5xxServerError()){
-                log.error("Error occurred while getting the weather...");
-            }
-            return null;
+
+        return getWeatherForCity(city);
+    }
+
+
+    private WeatherResponseDto getWeatherForCity(
+            String city
+    ) {
+
+        String normalizedCity =
+                normalizeCity(city);
+
+        String cacheKey =
+                buildCacheKey(normalizedCity);
+
+        // -----------------------------------------------------
+        // Redis cache
+        // -----------------------------------------------------
+
+        WeatherResponseDto cachedWeather =
+                redisService.get(
+                        cacheKey,
+                        WeatherResponseDto.class
+                );
+
+        if (cachedWeather != null) {
+            return cachedWeather;
+        }
+
+        // -----------------------------------------------------
+        // Geocoding
+        // -----------------------------------------------------
+
+        List<GeocodingResponse> locations =
+                openWeatherClient.geocodeCity(
+                        normalizedCity
+                );
+
+        if (locations == null ||
+                locations.isEmpty()) {
+
+            throw new ResourceNotFoundException(
+                    "Weather location not found for city: "
+                            + city
+            );
+        }
+
+        GeocodingResponse location =
+                locations.get(0);
+
+        // -----------------------------------------------------
+        // Current weather
+        // -----------------------------------------------------
+
+        OpenWeatherResponse weather =
+                openWeatherClient.getCurrentWeather(
+                        location.getLat(),
+                        location.getLon()
+                );
+
+        if (weather == null) {
+
+            throw new WeatherServiceException(
+                    "Unable to retrieve current weather.",
+                    HttpStatus.BAD_GATEWAY
+            );
+        }
+
+        // -----------------------------------------------------
+        // Validate provider response
+        // -----------------------------------------------------
+
+        validateWeatherResponse(
+                weather
+        );
+
+        // -----------------------------------------------------
+        // Map provider response
+        // -----------------------------------------------------
+
+        WeatherResponseDto response =
+                mapToWeatherResponse(
+                        weather,
+                        location
+                );
+
+        // -----------------------------------------------------
+        // Cache application DTO
+        // -----------------------------------------------------
+
+        redisService.set(
+                cacheKey,
+                response,
+                weatherProperties
+                        .getCacheTtlSeconds()
+        );
+
+        return response;
+    }
+
+
+    private void validateWeatherResponse(
+            OpenWeatherResponse weather
+    ) {
+
+        if (weather.getMain() == null) {
+
+            throw new WeatherServiceException(
+                    "Weather response is missing temperature data.",
+                    HttpStatus.BAD_GATEWAY
+            );
+        }
+
+        if (weather.getWind() == null) {
+
+            throw new WeatherServiceException(
+                    "Weather response is missing wind data.",
+                    HttpStatus.BAD_GATEWAY
+            );
         }
     }
+
+
+    private WeatherResponseDto mapToWeatherResponse(
+            OpenWeatherResponse weather,
+            GeocodingResponse location
+    ) {
+
+        String description = "Unknown";
+
+        String icon = null;
+
+        if (weather.getWeather() != null &&
+                !weather.getWeather().isEmpty()) {
+
+            OpenWeatherCondition condition =
+                    weather.getWeather().get(0);
+
+            if (condition.getDescription() != null &&
+                    !condition.getDescription().isBlank()) {
+
+                description =
+                        condition.getDescription();
+            }
+
+            icon =
+                    condition.getIcon();
+        }
+
+        return WeatherResponseDto.builder()
+                .city(
+                        location.getName()
+                )
+                .temperature(
+                        weather.getMain().getTemp()
+                )
+                .temperatureUnit(
+                        weatherProperties
+                                .getTemperatureUnit()
+                )
+                .description(description)
+                .humidity(
+                        weather.getMain().getHumidity()
+                )
+                .windSpeed(
+                        weather.getWind().getSpeed()
+                )
+                .windSpeedUnit(
+                        weatherProperties
+                                .getWindSpeedUnit()
+                )
+                .feelsLike(
+                        weather.getMain()
+                                .getFeelsLike()
+                )
+                .feelsLikeUnit(
+                        weatherProperties
+                                .getTemperatureUnit()
+                )
+                .icon(icon)
+                .build();
+    }
+
+
+    private String normalizeCity(
+            String city
+    ) {
+
+        return city
+                .trim()
+                .replaceAll(
+                        "\\s+",
+                        " "
+                );
+    }
+
+
+    private String buildCacheKey(String city) {
+
+        return WEATHER_CACHE_PREFIX
+                + city.toLowerCase(Locale.ROOT);
+    }
 }
-
-
-
-
-
-
-// Steps for the External API postCall:--------->
-// We can send 'Json' body or the 'Object' of class in the Post call of an API with the help of 'HttpEntity'...
-
-        // 1. JsonBody:--
-        /*  String jsonBody = "{\n" +
-                "    \"userName\": \"Ansh\",\n" +
-                "    \"password\" : \"Ansh\"\n" +
-                "}";
-        HttpEntity<String> httpEntity = new HttpEntity<>(jsonBody);
-
-        // 2. User:---
-        User user = User.builder().userName("Ansh").password("Ansh").build();
-        HttpEntity<User> httpEntity2 = new HttpEntity<>(user);
-
-
-        // We can also send the headers in the Post call of an API , because it can expect the arguments in the header...
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.set("Key","Value");
-
-
-        ResponseEntity<WeatherResponse> responseForPostCall = restTemplate.exchange(finalAPI, HttpMethod.POST, httpEntity, WeatherResponse.class);  */
