@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -12,37 +13,52 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
-    @Value("${spring.redis.host}")
+    @Value("${spring.data.redis.host}")
     private String host;
 
-    @Value("${spring.redis.port}")
+    @Value("${spring.data.redis.port}")
     private int port;
 
-    @Value("${spring.redis.password}")
+    @Value("${spring.data.redis.username}")
+    private String username;
+
+    @Value("${spring.data.redis.password}")
     private String password;
 
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+
+        RedisStandaloneConfiguration config =
+                new RedisStandaloneConfiguration();
+
         config.setHostName(host);
         config.setPort(port);
-        config.setPassword(password);   // IMPORTANT
+        config.setUsername(username);
+        config.setPassword(password);
 
-        // Redis Cloud requires SSL
-        LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
-        factory.setValidateConnection(true);
-        return factory;
+        return new LettuceConnectionFactory(config);
     }
 
     @Bean
-    public RedisTemplate redisTemplate(RedisConnectionFactory factory){ //'RedisConnectionFactory' is used to make and manage connection with the redis dataBase.
-        RedisTemplate redisTemplate = new RedisTemplate();
+    public RedisTemplate<String, String> redisTemplate(
+            RedisConnectionFactory factory
+    ) {
+
+        RedisTemplate<String, String> redisTemplate =
+                new RedisTemplate<>();
+
         redisTemplate.setConnectionFactory(factory);
 
-        redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(new StringRedisSerializer());
+        redisTemplate.setKeySerializer(
+                new StringRedisSerializer()
+        );
+
+        redisTemplate.setValueSerializer(
+                new StringRedisSerializer()
+        );
+
+        redisTemplate.afterPropertiesSet();
 
         return redisTemplate;
     }
-
 }

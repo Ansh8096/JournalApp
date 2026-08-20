@@ -1,43 +1,109 @@
 package net.engineerAnsh.journalApp.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+
 import java.util.concurrent.TimeUnit;
 
-@Slf4j
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class RedisService {
 
-    @Autowired
-    private RedisTemplate redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
-    public <T> T get(String city, Class<T> entityClass){
+    private final ObjectMapper objectMapper;
+
+
+    public <T> T get(
+            String key,
+            Class<T> entityClass
+    ) {
+
         try {
-            Object o = redisTemplate.opsForValue().get(city);
-            // Down here we are converting the Object 'o' into the required response(here i.e: 'WeatherResponse') which we want to return...
-            if (o == null) {
+
+            String value =
+                    redisTemplate
+                            .opsForValue()
+                            .get(key);
+
+            if (value == null) {
                 return null;
             }
-            ObjectMapper mapper = new ObjectMapper();
-            return mapper.readValue(o.toString(),entityClass);
-        } catch (Exception e) {
-            log.error("Exception Occurred while getting data from Redis..." ,e);
+
+            return objectMapper.readValue(
+                    value,
+                    entityClass
+            );
+
+        } catch (Exception ex) {
+
+            log.error(
+                    "Failed to retrieve Redis value. key={}",
+                    key,
+                    ex
+            );
+
+            /*
+             * Cache failure should behave like a cache miss.
+             * WeatherService can then fetch fresh data.
+             */
             return null;
         }
     }
 
-    public void set(String key ,Object o, Long ttl){
-        // 'ttl' -> stands for Time-Limit...
+
+    public void set(
+            String key,
+            Object value,
+            long ttlSeconds
+    ) {
+
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            String jsonValue = objectMapper.writeValueAsString(o);
-            redisTemplate.opsForValue().set(key, jsonValue , ttl , TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.error("Exception Occurred while storing data in Redis..." ,e);
+
+            String json =
+                    objectMapper.writeValueAsString(
+                            value
+                    );
+
+            redisTemplate
+                    .opsForValue()
+                    .set(
+                            key,
+                            json,
+                            ttlSeconds,
+                            TimeUnit.SECONDS
+                    );
+
+        } catch (Exception ex) {
+
+            log.error(
+                    "Failed to store Redis value. key={}",
+                    key,
+                    ex
+            );
+        }
+    }
+
+
+    public void delete(
+            String key
+    ) {
+
+        try {
+
+            redisTemplate.delete(key);
+
+        } catch (Exception ex) {
+
+            log.error(
+                    "Failed to delete Redis key. key={}",
+                    key,
+                    ex
+            );
         }
     }
 }
-

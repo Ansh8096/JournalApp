@@ -1,12 +1,13 @@
 package net.engineerAnsh.journalApp.Config.security;
 
+import lombok.RequiredArgsConstructor;
 import net.engineerAnsh.journalApp.Filter.JwtFilter;
 import net.engineerAnsh.journalApp.Service.UserDetailsServiceImpl;
 import net.engineerAnsh.journalApp.enums.Role;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
@@ -29,10 +30,10 @@ import java.util.List;
 @Configuration// Marks this class as a Spring configuration class, so Spring will read it and create beans defined here...
 @EnableWebSecurity// Enables Spring Security’s web security support and allows you to customize the security configuration for your application...
 @EnableMethodSecurity // Without @EnableMethodSecurity, Spring will ignore every @PreAuthorize.
+@RequiredArgsConstructor
 public class SecurityConfig { // This 'SecurityConfig' class controls how your entire application handles authentication and authorization...
 
-    @Autowired
-    private JwtFilter jwtFilter;
+    private final JwtFilter jwtFilter;
 
     @Value("${app.cors.allowed-origin}")
     private String allowedOrigin;
@@ -44,7 +45,7 @@ public class SecurityConfig { // This 'SecurityConfig' class controls how your e
                 .cors(Customizer.withDefaults()) // enable CORS in SecurityFilterChain...
                 .csrf(AbstractHttpConfigurer::disable) // Disables CSRF protection,CSRF is useful for browser sessions but often disabled in APIs for simplicity...
                 .authorizeHttpRequests(request -> request // 'authorizeHttpRequests()' tells the spring to start authorizing the requests...
-                        .requestMatchers("/api/v1/journals/**", "/api/v1/users/**").authenticated() // Only users who are logged in can access endpoints starting with /journals/ or /users/...
+                        .requestMatchers("/api/v1/journals/**", "/api/v1/users/**", "/api/v1/weather/**").authenticated() // Only users who are logged in can access endpoints starting with /journals/ or /users/...
                         .requestMatchers("/api/v1/admin/**").hasRole(Role.ADMIN.name()) // Only users who are logged in can access endpoints starting with /admin/ and has roles "ADMIN" ...
                         .anyRequest().permitAll())// All other endpoints are accessible without login...
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class) // applying filter before everytime we do userName and password authentication...
@@ -53,8 +54,7 @@ public class SecurityConfig { // This 'SecurityConfig' class controls how your e
 
     // We’re injecting our own implementation of UserDetailsService (which loads users from your database)...
     // This is how Spring Security knows where to fetch user details (username, password, roles, etc.) when someone tries to log in...
-    @Autowired
-    private UserDetailsServiceImpl userDetails;
+    private final UserDetailsServiceImpl userDetails;
 
     // This method used for matching the users details (that is sent in basic auth like: password & userName) with the details of that particular user stored in our dataBase...
     // We will be integrating our 'UserDetailsServiceImpl' in our spring security with the help of this method...
@@ -100,6 +100,10 @@ public class SecurityConfig { // This 'SecurityConfig' class controls how your e
         configuration.setAllowedHeaders(List.of("*"));
 
         configuration.setAllowCredentials(true);
+
+        configuration.setExposedHeaders(
+                List.of(HttpHeaders.CONTENT_DISPOSITION)
+        );
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
