@@ -1,14 +1,13 @@
 package net.engineerAnsh.journalApp.Schedular;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.engineerAnsh.journalApp.Cache.AppCache;
 import net.engineerAnsh.journalApp.Entity.Journal;
 import net.engineerAnsh.journalApp.Entity.User;
 import net.engineerAnsh.journalApp.Repository.UserRepositoryImpl;
 import net.engineerAnsh.journalApp.Service.EmailService;
 import net.engineerAnsh.journalApp.enums.Mood;
 import net.engineerAnsh.journalApp.model.SentimentData;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -20,16 +19,12 @@ import java.util.Map;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class UserSchedular {
 
-    @Autowired
-    private UserRepositoryImpl userRepository;
-
-    @Autowired
-    private EmailService emailService;
-
-    @Autowired
-    private KafkaTemplate<String ,SentimentData> kafkaTemplate;
+    private final UserRepositoryImpl userRepository;
+    private final EmailService emailService;
+    private final KafkaTemplate<String ,SentimentData> kafkaTemplate;
 
     @Scheduled(cron = "0 0 9 * * SUN")
     public void fetchUsersAndSendSaMail() {
@@ -79,12 +74,4 @@ public class UserSchedular {
         }
     }
 
-
-    @Autowired
-    private AppCache appCache;
-
-    @Scheduled (cron = "0 */10 * ? * *")
-    public void clearAppCache(){
-        appCache.init();
-    }
 }
