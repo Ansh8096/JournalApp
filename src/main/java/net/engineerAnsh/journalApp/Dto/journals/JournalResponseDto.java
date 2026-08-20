@@ -1,5 +1,6 @@
 package net.engineerAnsh.journalApp.Dto.journals;
 
+import net.engineerAnsh.journalApp.enums.JournalStatus;
 import net.engineerAnsh.journalApp.enums.Mood;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -28,6 +29,10 @@ public class JournalResponseDto {
 
     @Builder.Default
     private List<JournalImageResponseDto> images = List.of();
+
+    private List<String> tags;
+
+    private JournalStatus status;
 
     private LocalDateTime createdAt;
 

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import net.engineerAnsh.journalApp.enums.Mood;
+import java.util.List;
 
 @Getter
 @Setter
@@ -14,7 +15,7 @@ import net.engineerAnsh.journalApp.enums.Mood;
 public class CreateJournalRequestDto {
 
     @NotBlank(message = "Title is required")
-    @Size(max = 100)
+    @Size(max = 120)
     private String title;
 
     @NotBlank(message = "Content is required")
@@ -23,4 +24,6 @@ public class CreateJournalRequestDto {
 
     @NotNull(message = "Mood is required")
     private Mood mood;
+
+    private List<String> tags;
 }

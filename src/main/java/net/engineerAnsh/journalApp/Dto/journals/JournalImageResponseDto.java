@@ -14,5 +14,5 @@ public class JournalImageResponseDto {
     //  Public Cloudinary URL used by the frontend.
     private String imageUrl;
 
-    private String imagePublicId;
+    private String publicId;
 }

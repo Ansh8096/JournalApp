@@ -1,9 +1,10 @@
 package net.engineerAnsh.journalApp.Dto.journals;
 
 import lombok.*;
+import net.engineerAnsh.journalApp.enums.JournalStatus;
 import net.engineerAnsh.journalApp.enums.Mood;
-
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -22,8 +23,13 @@ public class JournalSummaryDto {
 
     private boolean favorite;
 
+    private String coverImageUrl;
+
+    private JournalStatus status;
+
+    private List<String> tags;
+
     private LocalDateTime createdAt;
 
-    private String coverImageUrl;
 
 }

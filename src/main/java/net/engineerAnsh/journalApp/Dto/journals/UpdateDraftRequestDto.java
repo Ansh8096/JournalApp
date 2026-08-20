@@ -1,8 +1,13 @@
 package net.engineerAnsh.journalApp.Dto.journals;
 
 import jakarta.validation.constraints.Size;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import net.engineerAnsh.journalApp.enums.Mood;
+
 import java.util.List;
 
 @Getter
@@ -10,7 +15,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UpdateJournalRequestDto implements JournalUpdateRequest{
+public class UpdateDraftRequestDto implements JournalUpdateRequest{
+
 
     @Size(max = 120)
     private String title;
@@ -23,5 +29,4 @@ public class UpdateJournalRequestDto implements JournalUpdateRequest{
     private List<String> tags;
 
     private List<String> removeImagePublicIds;
-
 }
