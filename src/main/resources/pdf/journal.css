@@ -1,0 +1,367 @@
+/* ==========================================================
+   Journal PDF stylesheet
+   Written for OpenHTMLToPDF / Flying Saucer compatibility:
+   - no flexbox, no CSS grid (floats + inline-block only)
+   - no custom @font-face (system-safe fonts only)
+   - box-shadow used as a non-critical enhancement only
+   - no gradients on the accent bar (solid color, for
+     consistent rendering across engines/versions)
+   ========================================================== */
+
+@page {
+    size: A4;
+    margin: 60px 56px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    color: #333333;
+    line-height: 1.7;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* ----------------------------------------------------------
+   Top accent bar
+   Replaces the old cover image as the document's visual
+   "opener" — a simple, elegant brand touch rather than a
+   photo. Solid color, not a gradient, for reliable rendering.
+   ---------------------------------------------------------- */
+
+.top-accent {
+    height: 6px;
+    width: 100%;
+    background-color: #6d28d9;
+    border-radius: 3px;
+    margin-bottom: 32px;
+}
+
+/* ----------------------------------------------------------
+   Header
+   ---------------------------------------------------------- */
+
+.doc-header {
+    margin-bottom: 32px;
+    page-break-after: avoid;
+}
+
+.brand {
+    margin: 0 0 6px 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #6d28d9;
+}
+
+h1 {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 30px;
+    font-weight: bold;
+    line-height: 1.25;
+    color: #1a1a1a;
+}
+
+.header-rule {
+    margin: 18px 0 22px 0;
+    height: 2px;
+    width: 64px;
+    background-color: #6d28d9;
+}
+
+/* Metadata panel — a bordered, tinted card rather than bare
+   text rows, so it reads as a designed element rather than a
+   plain data table. Built with floats, not flexbox, for
+   Flying Saucer compatibility. */
+
+.info-card {
+    display: block;
+    overflow: hidden; /* clearfix for the floated children below */
+    background-color: #faf5ff;
+    border: 1px solid #e9d5ff;
+    border-radius: 10px;
+    padding: 18px 20px;
+}
+
+.meta-item {
+    float: left;
+    width: 33%;
+    padding-right: 16px;
+}
+
+.meta-item-last {
+    padding-right: 0;
+}
+
+.meta-label {
+    display: block;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #8b5cf6;
+    margin-bottom: 4px;
+}
+
+.meta-value {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    color: #1a1a1a;
+}
+
+/* ----------------------------------------------------------
+   Tags
+   Now sits inside the header, directly under the info card,
+   so the whole "about this entry" summary reads as one
+   cohesive block before the content begins.
+   ---------------------------------------------------------- */
+
+.tags {
+    margin: 18px 0 0 0;
+}
+
+.tag {
+    display: inline-block;
+    padding: 5px 14px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    border-radius: 999px;
+    background-color: #f3e8ff;
+    border: 1px solid #e9d5ff;
+    color: #6d28d9;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* ----------------------------------------------------------
+   Section divider
+   ---------------------------------------------------------- */
+
+.section-divider {
+    margin: 28px 0;
+    height: 1px;
+    background-color: #ececec;
+}
+
+/* ----------------------------------------------------------
+   Journal content
+   Styles the tags a rich-text editor's output will actually
+   contain (p, strong, em, lists, blockquote, links), since
+   this is injected as raw HTML via th:utext.
+   ---------------------------------------------------------- */
+
+.journal-content {
+    font-size: 13px;
+    line-height: 1.85;
+    color: #262626;
+}
+
+.journal-content p {
+    margin: 0 0 16px 0;
+}
+
+.journal-content p:last-child {
+    margin-bottom: 0;
+}
+
+.journal-content strong {
+    font-weight: bold;
+    color: #1a1a1a;
+}
+
+.journal-content em {
+    font-style: italic;
+}
+
+.journal-content u {
+    text-decoration: underline;
+}
+
+.journal-content h1,
+.journal-content h2,
+.journal-content h3 {
+    font-family: Georgia, "Times New Roman", serif;
+    color: #1a1a1a;
+    margin: 24px 0 12px 0;
+    page-break-after: avoid;
+}
+
+.journal-content h1 {
+    font-size: 20px;
+}
+
+.journal-content h2 {
+    font-size: 17px;
+}
+
+.journal-content h3 {
+    font-size: 15px;
+}
+
+.journal-content h4,
+.journal-content h5,
+.journal-content h6 {
+    font-family: Georgia, "Times New Roman", serif;
+    color: #1a1a1a;
+    margin: 20px 0 10px 0;
+    page-break-after: avoid;
+}
+
+.journal-content h4 {
+    font-size: 14px;
+}
+
+.journal-content h5 {
+    font-size: 13px;
+}
+
+.journal-content h6 {
+    font-size: 12px;
+}
+
+.journal-content s,
+.journal-content del {
+    text-decoration: line-through;
+}
+
+.journal-content hr {
+    border: none;
+    border-top: 1px solid #dddddd;
+    margin: 28px 0;
+}
+
+.journal-content code {
+    font-family: Consolas, Monaco, monospace;
+    background: #f3f3f3;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.journal-content pre {
+    background: #f7f7f7;
+    border: 1px solid #dddddd;
+    border-radius: 8px;
+    padding: 14px;
+    margin: 22px 0;
+    page-break-inside: avoid;
+    white-space: pre-wrap;
+}
+
+.journal-content pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.journal-content .text-left {
+    text-align: left;
+}
+
+.journal-content .text-center {
+    text-align: center;
+}
+
+.journal-content .text-right {
+    text-align: right;
+}
+
+.journal-content .text-justify {
+    text-align: justify;
+}
+
+.journal-content ul,
+.journal-content ol {
+    margin: 0 0 16px 0;
+    padding-left: 22px;
+}
+
+.journal-content li {
+    margin-bottom: 6px;
+}
+
+.journal-content blockquote {
+    margin: 20px 0;
+    padding: 4px 20px;
+    border-left: 3px solid #6d28d9;
+    color: #555555;
+    font-style: italic;
+    page-break-inside: avoid;
+}
+
+.journal-content a {
+    color: #6d28d9;
+    text-decoration: underline;
+}
+
+
+
+/* ----------------------------------------------------------
+   Image gallery
+   ---------------------------------------------------------- */
+
+.gallery-section h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    color: #1a1a1a;
+    margin: 0 0 16px 0;
+    page-break-after: avoid;
+}
+
+.gallery {
+    display: block;
+    overflow: hidden; /* clearfix */
+}
+
+.gallery-item {
+    float: left;
+    width: 210px;
+    margin: 0 14px 14px 0;
+    page-break-inside: avoid;
+}
+
+.gallery-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+/* ----------------------------------------------------------
+   Footer
+   ---------------------------------------------------------- */
+
+footer {
+    margin-top: 56px;
+    text-align: center;
+    page-break-inside: avoid;
+}
+
+.footer-rule {
+    margin: 0 auto 14px auto;
+    height: 1px;
+    width: 100%;
+    background-color: #ececec;
+}
+
+footer p {
+    margin: 0;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #999999;
+}
