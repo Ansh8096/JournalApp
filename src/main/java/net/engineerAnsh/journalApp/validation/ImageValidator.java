@@ -71,8 +71,6 @@ public class ImageValidator {
         if (images == null || images.isEmpty()) {
             return;
         }
-
-
         validateImageCount(images);
 
         for (MultipartFile image : images) {
