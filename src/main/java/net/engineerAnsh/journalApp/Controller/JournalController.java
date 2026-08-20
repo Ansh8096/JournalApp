@@ -6,22 +6,24 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import net.engineerAnsh.journalApp.Dto.common.MessageResponseDto;
 import net.engineerAnsh.journalApp.Dto.journals.*;
+import net.engineerAnsh.journalApp.Service.JournalExportService;
 import net.engineerAnsh.journalApp.Service.JournalService;
 import net.engineerAnsh.journalApp.criteria.JournalSearchCriteria;
 import net.engineerAnsh.journalApp.enums.Mood;
 import net.engineerAnsh.journalApp.exception.exceptions.BadRequestException;
+import net.engineerAnsh.journalApp.model.JournalPdf;
 import org.bson.types.ObjectId;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Encoding;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -32,6 +34,7 @@ import java.util.List;
 public class JournalController {
 
     private final JournalService journalService;
+    private final JournalExportService journalExportService;
 
     @Operation(summary = "Create a new journal entry for the authenticated user")
     @RequestBody( // explicitly tells the OpenAPI generator: "The journal part inside this multipart request is JSON."
@@ -41,7 +44,8 @@ public class JournalController {
                             @Encoding(name = "journal", contentType = MediaType.APPLICATION_JSON_VALUE)
                     }
             )
-    )    @PostMapping(
+    )
+    @PostMapping(
             consumes = {
                     MediaType.MULTIPART_FORM_DATA_VALUE,
                     MediaType.APPLICATION_OCTET_STREAM_VALUE
@@ -77,6 +81,9 @@ public class JournalController {
             Boolean favorite,
 
             @RequestParam(required = false)
+            String tag,
+
+            @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate from,
 
@@ -87,11 +94,11 @@ public class JournalController {
             @ParameterObject Pageable pageable
     ) {
 
-
         JournalSearchCriteria criteria = JournalSearchCriteria.builder()
                 .query(query)
                 .mood(mood)
                 .favorite(favorite)
+                .tag(tag)
                 .from(from)
                 .to(to)
                 .build();
@@ -107,8 +114,7 @@ public class JournalController {
 
     @Operation(summary = "Get journal by its journalId")
     @GetMapping("/{journalId}")
-    public ResponseEntity<JournalResponseDto> getJournalById(@PathVariable String journalId)
-    {
+    public ResponseEntity<JournalResponseDto> getJournalById(@PathVariable String journalId) {
         // validate ObjectId first
         if (!ObjectId.isValid(journalId)) {
             throw new BadRequestException("Invalid journal id");
@@ -137,20 +143,53 @@ public class JournalController {
         );
     }
 
+
     @Operation(summary = "Update the journal entry of a user by journalId")
-    @PatchMapping("/{journalId}")
+    @RequestBody(
+            content = @Content(
+                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    encoding = {
+                            @Encoding(
+                                    name = "journal",
+                                    contentType =
+                                            MediaType.APPLICATION_JSON_VALUE
+                            )
+                    }
+            )
+    )
+    @PatchMapping(
+            value = "/{journalId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ResponseEntity<JournalResponseDto> updateJournalById(
+
             @PathVariable String journalId,
-            @org.springframework.web.bind.annotation.RequestBody
-            UpdateJournalRequestDto request
+
+            @RequestPart("journal")
+            UpdateJournalRequestDto request,
+
+            @RequestPart(
+                    value = "images",
+                    required = false
+            )
+            List<MultipartFile> images
     ) {
-        // validate ObjectId first
+
         if (!ObjectId.isValid(journalId)) {
-            throw new BadRequestException("Invalid journal id");
+
+            throw new BadRequestException(
+                    "Invalid journal id"
+            );
         }
 
-        JournalResponseDto journalResponse = journalService.updateJournalById(new ObjectId(journalId), request);
-        return ResponseEntity.ok(journalResponse);
+        JournalResponseDto response =
+                journalService.updateJournalById(
+                        new ObjectId(journalId),
+                        request,
+                        images
+                );
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Upload images to a journal")
@@ -278,12 +317,305 @@ public class JournalController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Get all journals of a user")
-    @GetMapping("/all")
-    public ResponseEntity<List<JournalResponseDto>> getAllJournals() {
+    @Operation(summary = "Get journal statistics")
+    @GetMapping("/statistics")
+    public ResponseEntity<JournalStatisticsResponseDto> getJournalStatistics() {
 
         return ResponseEntity.ok(
-                journalService.getAllJournals()
+                journalService.getJournalStatistics()
         );
+    }
+
+    @Operation(summary = "Download a journal as PDF")
+    @GetMapping("/{journalId}/download")
+    public ResponseEntity<ByteArrayResource> downloadJournal(
+            @PathVariable String journalId
+    ) {
+
+        if (!ObjectId.isValid(journalId)) {
+            throw new BadRequestException("Invalid journal id.");
+        }
+
+        JournalPdf pdf =
+                journalExportService.downloadJournal(
+                        new ObjectId(journalId)
+                );
+
+        ByteArrayResource resource =
+                new ByteArrayResource(
+                        pdf.content()
+                );
+
+        return ResponseEntity.ok()
+
+                .contentType(MediaType.APPLICATION_PDF)
+
+                .contentLength(
+                        pdf.content().length
+                )
+
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" +
+                                pdf.fileName() +
+                                "\""
+                )
+
+                .cacheControl(
+                        CacheControl.noCache()
+                )
+
+                .body(resource);
+    }
+
+
+    @Operation(summary = "Create a new journal draft")
+    @RequestBody(
+            content = @Content(
+                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    encoding = {
+                            @Encoding(
+                                    name = "draft",
+                                    contentType = MediaType.APPLICATION_JSON_VALUE
+                            )
+                    }
+            )
+    )
+    @PostMapping(
+            value = "/drafts",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<JournalResponseDto> createDraft(
+
+            @RequestPart("draft")
+            CreateDraftRequestDto request,
+
+            @RequestPart(
+                    value = "images",
+                    required = false
+            )
+            List<MultipartFile> images
+    ) {
+
+        JournalResponseDto response =
+                journalService.createDraft(
+                        request,
+                        images
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
+    }
+
+    @Operation(summary = "Update a journal draft")
+    @RequestBody(
+            content = @Content(
+                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    encoding = {
+                            @Encoding(
+                                    name = "draft",
+                                    contentType =
+                                            MediaType.APPLICATION_JSON_VALUE
+                            )
+                    }
+            )
+    )
+    @PatchMapping(
+            value = "/drafts/{id}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<JournalResponseDto> updateDraft(
+
+            @PathVariable String id,
+
+            @RequestPart("draft")
+            UpdateDraftRequestDto request,
+
+            @RequestPart(
+                    value = "images",
+                    required = false
+            )
+            List<MultipartFile> images
+    ) {
+
+        if (!ObjectId.isValid(id)) {
+
+            throw new BadRequestException(
+                    "Invalid draft id."
+            );
+        }
+
+        JournalResponseDto response =
+                journalService.updateDraft(
+                        new ObjectId(id),
+                        request,
+                        images
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get all journal drafts")
+    @GetMapping("/drafts")
+    public ResponseEntity<JournalPageResponseDto> getDrafts(
+
+            @ParameterObject
+            Pageable pageable
+    ) {
+
+        JournalPageResponseDto response =
+                journalService.getDrafts(
+                        pageable
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get a journal draft by id")
+    @GetMapping("/drafts/{id}")
+    public ResponseEntity<JournalResponseDto> getDraftById(
+
+            @PathVariable String id
+    ) {
+
+        if (!ObjectId.isValid(id)) {
+            throw new BadRequestException(
+                    "Invalid draft id."
+            );
+        }
+
+        JournalResponseDto response =
+                journalService.getDraftById(
+                        new ObjectId(id)
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Delete a journal draft")
+    @DeleteMapping("/drafts/{id}")
+    public ResponseEntity<MessageResponseDto> deleteDraft(
+
+            @PathVariable String id
+    ) {
+
+        if (!ObjectId.isValid(id)) {
+            throw new BadRequestException(
+                    "Invalid draft id."
+            );
+        }
+
+        MessageResponseDto response =
+                journalService.deleteDraft(
+                        new ObjectId(id)
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Delete an image from a journal draft")
+    @DeleteMapping("/drafts/{id}/images")
+    public ResponseEntity<JournalResponseDto> deleteDraftImage(
+
+            @PathVariable String id,
+
+            @RequestParam("publicId")
+            String publicId
+    ) {
+
+        if (!ObjectId.isValid(id)) {
+
+            throw new BadRequestException(
+                    "Invalid draft id."
+            );
+        }
+
+        JournalResponseDto response =
+                journalService.deleteDraftImage(
+                        new ObjectId(id),
+                        publicId
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Publish a journal draft")
+    @PostMapping("/drafts/{id}/publish")
+    public ResponseEntity<JournalResponseDto> publishDraft(
+            @PathVariable String id
+    ) {
+
+        if (!ObjectId.isValid(id)) {
+            throw new BadRequestException(
+                    "Invalid draft id."
+            );
+        }
+
+        JournalResponseDto response =
+                journalService.publishDraft(
+                        new ObjectId(id)
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Replace an image in a journal draft")
+    @PutMapping(
+            value = "/drafts/{id}/images",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<JournalResponseDto> replaceDraftImage(
+
+            @PathVariable String id,
+
+            @RequestParam("publicId")
+            String publicId,
+
+            @RequestPart("image")
+            MultipartFile image
+    ) {
+
+        if (!ObjectId.isValid(id)) {
+
+            throw new BadRequestException(
+                    "Invalid draft id."
+            );
+        }
+
+        JournalResponseDto response =
+                journalService.replaceDraftImage(
+                        new ObjectId(id),
+                        publicId,
+                        image
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Set a cover image for a journal draft")
+    @PatchMapping("/drafts/{id}/cover")
+    public ResponseEntity<JournalResponseDto> setDraftCoverImage(
+
+            @PathVariable String id,
+
+            @RequestParam("publicId")
+            String publicId
+    ) {
+
+        if (!ObjectId.isValid(id)) {
+
+            throw new BadRequestException(
+                    "Invalid draft id."
+            );
+        }
+
+        JournalResponseDto response =
+                journalService.setDraftCoverImage(
+                        new ObjectId(id),
+                        publicId
+                );
+
+        return ResponseEntity.ok(response);
     }
 }

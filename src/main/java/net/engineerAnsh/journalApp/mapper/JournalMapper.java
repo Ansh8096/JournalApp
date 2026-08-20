@@ -19,7 +19,7 @@ public class JournalMapper {
 
         return JournalImageResponseDto.builder()
                 .imageUrl(image.getImageUrl())
-                .imagePublicId(image.getPublicId())
+                .publicId(image.getPublicId())
                 .build();
     }
 
@@ -46,6 +46,8 @@ public class JournalMapper {
                 .mood(journal.getMood())
                 .favorite(journal.isFavorite())
                 .coverImageUrl(journal.getCoverImageUrl())
+                .tags(journal.getTags())
+                .status(journal.getStatus())
                 .createdAt(journal.getCreatedAt())
                 .build();
     }
@@ -61,6 +63,8 @@ public class JournalMapper {
                 .favorite(journal.isFavorite())
                 .coverImageUrl(journal.getCoverImageUrl())
                 .images(toImageResponseDtos(journal.getImages()))
+                .tags(journal.getTags())
+                .status(journal.getStatus())
                 .createdAt(journal.getCreatedAt())
                 .updatedAt(journal.getUpdatedAt())
                 .build();
