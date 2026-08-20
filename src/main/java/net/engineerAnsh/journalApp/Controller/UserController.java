@@ -8,7 +8,6 @@ import net.engineerAnsh.journalApp.Dto.auth.AuthResponseDto;
 import net.engineerAnsh.journalApp.Dto.common.MessageResponseDto;
 import net.engineerAnsh.journalApp.Dto.user.*;
 import net.engineerAnsh.journalApp.Service.UserService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -95,12 +94,5 @@ public class UserController {
                 userService.uploadProfileImage(image)
         );
 
-    }
-
-    @GetMapping("me/greet")
-    @Operation(summary = "Greetings from the user")
-    public ResponseEntity<?> greetingsByUser() {
-        String greeted = userService.greetTheUser();
-        return new ResponseEntity<>(greeted, HttpStatus.OK);
     }
 }

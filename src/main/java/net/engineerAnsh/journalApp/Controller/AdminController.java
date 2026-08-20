@@ -3,7 +3,6 @@ package net.engineerAnsh.journalApp.Controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import net.engineerAnsh.journalApp.Cache.AppCache;
 import net.engineerAnsh.journalApp.Dto.admin.CreateAdminDto;
 import net.engineerAnsh.journalApp.Dto.common.MessageResponseDto;
 import net.engineerAnsh.journalApp.Dto.user.UserProfileResponseDto;
@@ -24,9 +23,6 @@ public class AdminController {
     @Autowired
     private UserService userService;
 
-    @Autowired
-    AppCache appCache;
-
     @GetMapping("/all-users")
     @Operation(summary = "See all the existing users")
     public ResponseEntity<List<UserProfileResponseDto>> getAllUsers(){
@@ -46,10 +42,4 @@ public class AdminController {
                 );
     }
 
-
-    @GetMapping("/clear-app-cache")
-    @Operation(summary = "Load the cache manually")
-    public void clearAppCache(){
-        appCache.init();
-    }
 }
