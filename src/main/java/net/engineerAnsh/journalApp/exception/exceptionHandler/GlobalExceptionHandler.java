@@ -147,6 +147,25 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
+    @ExceptionHandler(PdfGenerationException.class)
+    public ResponseEntity<ErrorResponseDto> handlePdfGenerationException(
+            PdfGenerationException ex,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponseDto response = ErrorResponseDto.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleGlobalException(
             Exception ex,
@@ -179,6 +198,26 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(WeatherServiceException.class)
+    public ResponseEntity<ErrorResponseDto> handleWeatherServiceException(
+            WeatherServiceException ex,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponseDto response =
+                ErrorResponseDto.builder()
+                        .timestamp(LocalDateTime.now())
+                        .status(ex.getStatus().value())
+                        .error(HttpStatus.BAD_GATEWAY.getReasonPhrase())
+                        .message(ex.getMessage())
+                        .path(request.getRequestURI())
+                        .build();
+
+        return ResponseEntity
+                .status(ex.getStatus())
+                .body(response);
     }
 
 }
