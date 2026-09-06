@@ -166,6 +166,12 @@ public class WeatherService {
         }
     }
 
+    private double convertMetersPerSecondToKilometersPerHour(
+            double metersPerSecond
+    ) {
+
+        return metersPerSecond * 3.6;
+    }
 
     private WeatherResponseDto mapToWeatherResponse(
             OpenWeatherResponse weather,
@@ -209,7 +215,9 @@ public class WeatherService {
                         weather.getMain().getHumidity()
                 )
                 .windSpeed(
-                        weather.getWind().getSpeed()
+                        convertMetersPerSecondToKilometersPerHour(
+                                weather.getWind().getSpeed()
+                        )
                 )
                 .windSpeedUnit(
                         weatherProperties

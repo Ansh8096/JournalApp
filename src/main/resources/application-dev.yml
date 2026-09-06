@@ -14,6 +14,17 @@ spring:
       ssl:
         enabled: true
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
 
   # Because of this properties 'JavaMAilSender' object will get initialized...
   mail:
@@ -43,15 +54,6 @@ spring:
           json:
             trusted:
               packages: net.engineerAnsh.journalApp.model
-
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
-
   servlet:
     multipart:
       max-file-size: 5MB
@@ -71,6 +73,14 @@ app:
   images:
     max-count: 5
     max-size: 5 * 1024 * 1024 # 5MB
+  jwt:
+    secret: ${JWT_SECRET}
+
+  oauth2:
+    frontend-success-url: http://localhost:5173/oauth2/callback
+    frontend-signup-url: http://localhost:5173/signup
+    frontend-login-url: http://localhost:5173/login
+    frontend-failure-url: http://localhost:5173/login
 
 cloudinary:
   cloud-name: ${CLOUDINARY_NAME}
@@ -91,5 +101,5 @@ weather:
     api-key: ${OPENWEATHER_API_KEY}
     units: metric
     temperature-unit: "°C"
-    wind-speed-unit: "m/s"
+    wind-speed-unit: "km/h"
     cache-ttl-seconds: 600
