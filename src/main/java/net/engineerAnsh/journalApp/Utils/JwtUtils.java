@@ -1,10 +1,18 @@
 package net.engineerAnsh.journalApp.Utils;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+
+import jakarta.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
 import javax.crypto.SecretKey;
+
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,61 +20,173 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
-    // This is the secret key used to sign and verify your JWTs.
-    // Think of it like a password known only to your server.
-    // If someone doesn’t have this key, they can’t create valid tokens.
-    private String SECRET_KEY = "TaK+HaV^uvCHEFsEVfypW#7g9^k*Z8$V";
+    @Value("${app.jwt.secret}")
+    private String secretKey;
 
-    // This converts your secret string into a special format (SecretKey) that the JWT library can use for encryption and signature verification.
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    private SecretKey signingKey;
+
+    @PostConstruct
+    void initialize() {
+
+        if (
+                secretKey == null
+                        || secretKey.isBlank()
+        ) {
+
+            throw new IllegalStateException(
+                    "JWT_SECRET must be configured."
+            );
+        }
+
+        /*
+         * HS256 requires a sufficiently strong key.
+         *
+         * Keep JWT_SECRET at least 32 bytes long.
+         */
+        if (
+                secretKey.getBytes(
+                        StandardCharsets.UTF_8
+                ).length < 32
+        ) {
+
+            throw new IllegalStateException(
+                    "JWT_SECRET must contain at least 32 bytes."
+            );
+        }
+
+        signingKey =
+                Keys.hmacShaKeyFor(
+                        secretKey.getBytes(
+                                StandardCharsets.UTF_8
+                        )
+                );
     }
 
-    // Every JWT contains a subject (sub) field — usually the username or user email.
-    // This method reads the token, extracts all the data (claims), and returns that username.
-    public String extractUsername(String token) {
-        Claims claims = extractAllClaims(token);
-        return claims.getSubject();
+    public String extractUsername(
+            String token
+    ) {
+
+        return extractAllClaims(
+                token
+        ).getSubject();
     }
 
-    // This reads when the token will expire — after this time, the token becomes invalid...
-    public Date extractExpiration(String token) {
-        return extractAllClaims(token).getExpiration();
+    public Date extractExpiration(
+            String token
+    ) {
+
+        return extractAllClaims(
+                token
+        ).getExpiration();
     }
 
-    private Claims extractAllClaims(String token) {
+    private Claims extractAllClaims(
+            String token
+    ) {
+
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(
+                        signingKey
+                )
                 .build()
-                .parseSignedClaims(token)
+                .parseSignedClaims(
+                        token
+                )
                 .getPayload();
     }
 
-    private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+    private boolean isTokenExpired(
+            String token
+    ) {
+
+        Date expiration =
+                extractExpiration(
+                        token
+                );
+
+        return expiration == null
+                || expiration.before(
+                new Date()
+        );
     }
 
-    public String generateToken(String username) {
-        // we can send information into our payload if we want,
-        // with the help of 'claims' (hashMap)...
-        Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username);
+    public String generateToken(
+            String username
+    ) {
+
+        Map<String, Object> claims =
+                new HashMap<>();
+
+        return createToken(
+                claims,
+                username
+        );
     }
 
-    private String createToken(Map<String, Object> claims, String subject) {
+    private String createToken(
+            Map<String, Object> claims,
+            String subject
+    ) {
+
+        Date now =
+                new Date();
+
+        Date expiration =
+                new Date(
+                        now.getTime()
+                                + 1000L
+                                * 60
+                                * 60
+                );
+
         return Jwts.builder()
-                .claims(claims) // adds custom data (currently empty in our case)...
-                .subject(subject) // here subject: username , used for identification ...
-                .header().empty().add("typ","JWT")
-                .and()
-                .issuedAt(new Date(System.currentTimeMillis())) // it means when the token was created...
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 60 minutes expiration time set for each token...
-                .signWith(getSigningKey()) // → uses your secret key to secure the token...
-                .compact(); //  creates the final JWT string ...
+                .claims(claims)
+                .subject(subject)
+                .issuedAt(now)
+                .expiration(expiration)
+                .signWith(signingKey)
+                .compact();
     }
 
-    public Boolean validateToken(String token) {
-        return !isTokenExpired(token);
-    }
+    public boolean validateToken(
+            String token
+    ) {
 
+        if (
+                token == null
+                        || token.isBlank()
+        ) {
+
+            return false;
+        }
+
+        try {
+
+            Claims claims =
+                    Jwts.parser()
+                            .verifyWith(
+                                    signingKey
+                            )
+                            .build()
+                            .parseSignedClaims(
+                                    token
+                            )
+                            .getPayload();
+
+            Date expiration =
+                    claims.getExpiration();
+
+            return expiration != null
+                    && expiration.after(
+                    new Date()
+            );
+
+        } catch (
+                JwtException
+                | IllegalArgumentException ex
+        ) {
+
+            return false;
+        }
+    }
 }
