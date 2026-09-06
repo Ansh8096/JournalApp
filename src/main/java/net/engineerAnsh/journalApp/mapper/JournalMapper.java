@@ -49,6 +49,8 @@ public class JournalMapper {
                 .tags(journal.getTags())
                 .status(journal.getStatus())
                 .createdAt(journal.getCreatedAt())
+                .updatedAt(journal.getUpdatedAt())
+                .publishedAt(journal.getPublishedAt())
                 .build();
     }
 
@@ -67,6 +69,7 @@ public class JournalMapper {
                 .status(journal.getStatus())
                 .createdAt(journal.getCreatedAt())
                 .updatedAt(journal.getUpdatedAt())
+                .publishedAt(journal.getPublishedAt())
                 .build();
     }
 

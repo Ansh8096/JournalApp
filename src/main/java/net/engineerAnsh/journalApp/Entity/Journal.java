@@ -54,4 +54,6 @@ public class Journal {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    private LocalDateTime publishedAt;
+
 }

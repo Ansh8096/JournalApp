@@ -25,8 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -144,43 +146,280 @@ public class JournalService {
         return journal;
     }
 
-    private Comparator<Journal> buildComparator(Pageable pageable) {
+    private Comparator<Journal> buildDraftComparator(
+            Pageable pageable
+    ) {
 
         if (pageable.getSort().isUnsorted()) {
-            return Comparator.comparing(Journal::getCreatedAt).reversed();
+
+            return Comparator.comparing(
+                    Journal::getUpdatedAt,
+                    Comparator.nullsLast(
+                            Comparator.reverseOrder()
+                    )
+            );
+        }
+
+        return buildComparator(pageable);
+    }
+
+    private List<Journal> getDraftJournals(
+            JournalSearchCriteria criteria,
+            User user,
+            Pageable pageable
+    ) {
+
+        if (user == null) {
+
+            throw new ResourceNotFoundException(
+                    "User not found."
+            );
+        }
+
+        Stream<Journal> stream =
+                user.getJournals()
+                        .stream()
+                        .filter(journal ->
+                                journal.getStatus()
+                                        == JournalStatus.DRAFT
+                        );
+
+        // ---------------------------------------------------------
+        // Search by title, content, or tags
+        // ---------------------------------------------------------
+
+        if (criteria.getQuery() != null &&
+                !criteria.getQuery().isBlank()) {
+
+            String query =
+                    criteria.getQuery()
+                            .trim()
+                            .toLowerCase(Locale.ROOT);
+
+            stream = stream.filter(journal ->
+
+                    (journal.getTitle() != null &&
+                            journal.getTitle()
+                                    .toLowerCase(Locale.ROOT)
+                                    .contains(query))
+
+                            ||
+
+                            (journal.getContent() != null &&
+                                    journal.getContent()
+                                            .toLowerCase(Locale.ROOT)
+                                            .contains(query))
+
+                            ||
+
+                            (journal.getTags() != null &&
+                                    journal.getTags()
+                                            .stream()
+                                            .anyMatch(tag ->
+                                                    tag != null &&
+                                                            tag.toLowerCase(
+                                                                            Locale.ROOT
+                                                                    )
+                                                                    .contains(query)
+                                            ))
+            );
+        }
+
+        // ---------------------------------------------------------
+        // Filter by mood
+        // ---------------------------------------------------------
+
+        if (criteria.getMood() != null) {
+
+            stream = stream.filter(journal ->
+                    journal.getMood()
+                            == criteria.getMood()
+            );
+        }
+
+        // ---------------------------------------------------------
+        // Filter by tag
+        // ---------------------------------------------------------
+
+        if (criteria.getTag() != null &&
+                !criteria.getTag().isBlank()) {
+
+            String requestedTag =
+                    criteria.getTag()
+                            .trim();
+
+            stream = stream.filter(journal ->
+
+                    journal.getTags() != null &&
+
+                            journal.getTags()
+                                    .stream()
+                                    .anyMatch(tag ->
+                                            tag != null &&
+                                                    tag.equalsIgnoreCase(
+                                                            requestedTag
+                                                    )
+                                    )
+            );
+        }
+
+        // ---------------------------------------------------------
+        // Filter by UPDATED date - from
+        // ---------------------------------------------------------
+
+        if (criteria.getFrom() != null) {
+
+            stream = stream.filter(journal ->
+
+                    journal.getUpdatedAt() != null &&
+
+                            !journal.getUpdatedAt()
+                                    .toLocalDate()
+                                    .isBefore(
+                                            criteria.getFrom()
+                                    )
+            );
+        }
+
+        // ---------------------------------------------------------
+        // Filter by UPDATED date - to
+        // ---------------------------------------------------------
+
+        if (criteria.getTo() != null) {
+
+            stream = stream.filter(journal ->
+
+                    journal.getUpdatedAt() != null &&
+
+                            !journal.getUpdatedAt()
+                                    .toLocalDate()
+                                    .isAfter(
+                                            criteria.getTo()
+                                    )
+            );
+        }
+
+        // ---------------------------------------------------------
+        // Collect and sort
+        // ---------------------------------------------------------
+
+        List<Journal> drafts =
+                new ArrayList<>(
+                        stream.toList()
+                );
+
+        drafts.sort(
+                buildDraftComparator(
+                        pageable
+                )
+        );
+
+        return drafts;
+    }
+
+    private Comparator<Journal> buildComparator(
+            Pageable pageable
+    ) {
+
+        if (pageable.getSort().isUnsorted()) {
+
+            return Comparator.comparing(
+                    this::getPublicationTime,
+                    Comparator.nullsLast(
+                            Comparator.reverseOrder()
+                    )
+            );
         }
 
         Comparator<Journal> comparator = null;
 
         for (Sort.Order order : pageable.getSort()) {
 
-            Comparator<Journal> current = switch (order.getProperty()) {
+            Comparator<Journal> current =
+                    switch (order.getProperty()) {
 
-                case "title" -> Comparator.comparing(
-                        Journal::getTitle,
-                        String.CASE_INSENSITIVE_ORDER);
+                        case "title" ->
+                                Comparator.comparing(
+                                        Journal::getTitle,
+                                        Comparator.nullsLast(
+                                                String.CASE_INSENSITIVE_ORDER
+                                        )
+                                );
 
-                case "createdAt" -> Comparator.comparing(Journal::getCreatedAt);
+                        case "publishedAt" ->
+                                Comparator.comparing(
+                                        this::getPublicationTime,
+                                        Comparator.nullsLast(
+                                                Comparator.naturalOrder()
+                                        )
+                                );
 
-                case "updatedAt" -> Comparator.comparing(Journal::getUpdatedAt);
+                        case "createdAt" ->
+                                Comparator.comparing(
+                                        Journal::getCreatedAt,
+                                        Comparator.nullsLast(
+                                                Comparator.naturalOrder()
+                                        )
+                                );
 
-                case "mood" -> Comparator.comparing(Journal::getMood);
+                        case "updatedAt" ->
+                                Comparator.comparing(
+                                        Journal::getUpdatedAt,
+                                        Comparator.nullsLast(
+                                                Comparator.naturalOrder()
+                                        )
+                                );
 
-                case "favorite" -> Comparator.comparing(Journal::isFavorite);
+                        case "mood" ->
+                                Comparator.comparing(
+                                        Journal::getMood,
+                                        Comparator.nullsLast(
+                                                Comparator.naturalOrder()
+                                        )
+                                );
 
-                default -> Comparator.comparing(Journal::getCreatedAt);
-            };
+                        case "favorite" ->
+                                Comparator.comparing(
+                                        Journal::isFavorite
+                                );
+
+                        default ->
+                                Comparator.comparing(
+                                        this::getPublicationTime,
+                                        Comparator.nullsLast(
+                                                Comparator.naturalOrder()
+                                        )
+                                );
+                    };
 
             if (order.isDescending()) {
                 current = current.reversed();
             }
 
-            comparator = comparator == null
-                    ? current
-                    : comparator.thenComparing(current);
+            comparator =
+                    comparator == null
+                            ? current
+                            : comparator.thenComparing(
+                            current
+                    );
         }
 
         return comparator;
+    }
+
+    private LocalDateTime getPublicationTime(
+            Journal journal
+    ) {
+
+        if (journal.getPublishedAt() != null) {
+            return journal.getPublishedAt();
+        }
+
+        /*
+         * Temporary fallback for legacy
+         * published journals.
+         */
+        return journal.getCreatedAt();
     }
 
     private List<Journal> getJournals(
@@ -241,19 +480,32 @@ public class JournalService {
         // Filter by start date
         if (criteria.getFrom() != null) {
 
-            stream = stream.filter(journal ->
-                    !journal.getCreatedAt()
-                            .toLocalDate()
-                            .isBefore(criteria.getFrom()));
+            stream = stream.filter(journal -> {
+
+                LocalDateTime publicationTime =
+                        getPublicationTime(journal);
+
+                return publicationTime != null &&
+                        !publicationTime.toLocalDate()
+                                .isBefore(
+                                        criteria.getFrom()
+                                );
+            });
         }
 
-        // Filter by end date
         if (criteria.getTo() != null) {
 
-            stream = stream.filter(journal ->
-                    !journal.getCreatedAt()
-                            .toLocalDate()
-                            .isAfter(criteria.getTo()));
+            stream = stream.filter(journal -> {
+
+                LocalDateTime publicationTime =
+                        getPublicationTime(journal);
+
+                return publicationTime != null &&
+                        !publicationTime.toLocalDate()
+                                .isAfter(
+                                        criteria.getTo()
+                                );
+            });
         }
 
         List<Journal> journals = stream.toList();
@@ -743,6 +995,7 @@ public class JournalService {
                     .tags(normalizedTags)
                     .images(journalImages)
                     .status(JournalStatus.PUBLISHED)
+                    .publishedAt(LocalDateTime.now())
                     .build();
 
             // Save the journal
@@ -1141,36 +1394,19 @@ public class JournalService {
 
     @Transactional(readOnly = true)
     public JournalPageResponseDto getDrafts(
+            JournalSearchCriteria criteria,
             Pageable pageable
     ) {
 
-        String username = getLoggedInUser();
-
         User user =
-                userService.findUserByUserName(username);
-
-        if (user == null) {
-            throw new ResourceNotFoundException(
-                    "User not found."
-            );
-        }
+                getAuthenticatedUser();
 
         List<Journal> drafts =
-                user.getJournals()
-                        .stream()
-                        .filter(journal ->
-                                journal.getStatus()
-                                        == JournalStatus.DRAFT
-                        )
-                        .sorted(
-                                Comparator.comparing(
-                                        Journal::getUpdatedAt,
-                                        Comparator.nullsLast(
-                                                Comparator.reverseOrder()
-                                        )
-                                )
-                        )
-                        .toList();
+                getDraftJournals(
+                        criteria,
+                        user,
+                        pageable
+                );
 
         int page =
                 pageable.getPageNumber();
@@ -1182,7 +1418,7 @@ public class JournalService {
                 drafts.size();
 
         int totalPages =
-                size == 0
+                size <= 0
                         ? 0
                         : (int) Math.ceil(
                         (double) totalElements / size
@@ -1211,8 +1447,10 @@ public class JournalService {
                 );
 
         List<JournalSummaryDto> summaries =
-                drafts
-                        .subList(start, end)
+                drafts.subList(
+                                start,
+                                end
+                        )
                         .stream()
                         .map(journalMapper::toSummaryDto)
                         .toList();
@@ -1431,6 +1669,10 @@ public class JournalService {
                 JournalStatus.PUBLISHED
         );
 
+        draft.setPublishedAt(
+                LocalDateTime.now()
+        );
+
         Journal publishedJournal =
                 journalRepository.save(draft);
 
@@ -1438,4 +1680,63 @@ public class JournalService {
                 publishedJournal
         );
     }
+
+    @Transactional(readOnly = true)
+    public DraftOverviewDto getDraftOverview() {
+
+        User user = getAuthenticatedUser();
+
+        LocalDate today = LocalDate.now();
+
+        List<Journal> drafts =
+                user.getJournals()
+                        .stream()
+                        .filter(journal ->
+                                journal.getStatus()
+                                        == JournalStatus.DRAFT
+                        )
+                        .toList();
+
+        long totalDrafts =
+                drafts.size();
+
+        long updatedToday =
+                drafts.stream()
+                        .filter(journal ->
+                                journal.getUpdatedAt() != null &&
+                                        journal.getUpdatedAt()
+                                                .toLocalDate()
+                                                .equals(today)
+                        )
+                        .count();
+
+        double averageDraftAge =
+                drafts.stream()
+                        .filter(journal ->
+                                journal.getCreatedAt() != null
+                        )
+                        .mapToLong(journal ->
+                                ChronoUnit.DAYS.between(
+                                        journal.getCreatedAt()
+                                                .toLocalDate(),
+                                        today
+                                )
+                        )
+                        .average()
+                        .orElse(0);
+
+        long averageDraftAgeDays =
+                Math.round(
+                        averageDraftAge
+                );
+
+        return DraftOverviewDto.builder()
+                .totalDrafts(totalDrafts)
+                .updatedToday(updatedToday)
+                .averageDraftAgeDays(
+                        averageDraftAgeDays
+                )
+                .build();
+    }
+
 }

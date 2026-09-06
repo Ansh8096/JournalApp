@@ -16,6 +16,8 @@ import org.bson.types.ObjectId;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -460,16 +462,65 @@ public class JournalController {
     @GetMapping("/drafts")
     public ResponseEntity<JournalPageResponseDto> getDrafts(
 
+            @RequestParam(required = false)
+            String query,
+
+            @RequestParam(required = false)
+            Mood mood,
+
+            @RequestParam(required = false)
+            String tag,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(
+                    iso = DateTimeFormat.ISO.DATE
+            )
+            LocalDate from,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(
+                    iso = DateTimeFormat.ISO.DATE
+            )
+            LocalDate to,
+
             @ParameterObject
+            @PageableDefault(
+                    sort = "updatedAt",
+                    direction = Sort.Direction.DESC
+            )
             Pageable pageable
     ) {
 
+        JournalSearchCriteria criteria =
+                JournalSearchCriteria.builder()
+                        .query(query)
+                        .mood(mood)
+                        .tag(tag)
+                        .from(from)
+                        .to(to)
+                        .build();
+
         JournalPageResponseDto response =
                 journalService.getDrafts(
+                        criteria,
                         pageable
                 );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                response
+        );
+    }
+
+    @Operation(summary = "Get draft overview")
+    @GetMapping("/drafts/overview")
+    public ResponseEntity<DraftOverviewDto> getDraftOverview() {
+
+        DraftOverviewDto response =
+                journalService.getDraftOverview();
+
+        return ResponseEntity.ok(
+                response
+        );
     }
 
     @Operation(summary = "Get a journal draft by id")
@@ -618,4 +669,5 @@ public class JournalController {
 
         return ResponseEntity.ok(response);
     }
+
 }

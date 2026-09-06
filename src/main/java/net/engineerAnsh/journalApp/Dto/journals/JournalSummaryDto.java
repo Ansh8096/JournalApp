@@ -31,5 +31,7 @@ public class JournalSummaryDto {
 
     private LocalDateTime createdAt;
 
+    private LocalDateTime updatedAt;
 
+    private LocalDateTime publishedAt;
 }

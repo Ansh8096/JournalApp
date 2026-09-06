@@ -37,4 +37,6 @@ public class JournalResponseDto {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private LocalDateTime publishedAt;
 }
