@@ -1,6 +1,7 @@
 package net.engineerAnsh.journalApp.exception.exceptionHandler;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import net.engineerAnsh.journalApp.Dto.common.ErrorResponseDto;
 import net.engineerAnsh.journalApp.exception.exceptions.*;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -169,17 +171,43 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleGlobalException(
             Exception ex,
-            HttpServletRequest request) {
+            HttpServletRequest request
+    ) {
 
-        ErrorResponseDto response = ErrorResponseDto.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .build();
+        /*
+         * Log the actual exception on the server.
+         */
+        log.error(
+                "Unhandled exception for {}",
+                request.getRequestURI(),
+                ex
+        );
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        ErrorResponseDto response =
+                ErrorResponseDto.builder()
+                        .timestamp(
+                                LocalDateTime.now()
+                        )
+                        .status(
+                                HttpStatus.INTERNAL_SERVER_ERROR
+                                        .value()
+                        )
+                        .error(
+                                HttpStatus.INTERNAL_SERVER_ERROR
+                                        .getReasonPhrase()
+                        )
+                        .message(
+                                "An unexpected error occurred. Please try again later."
+                        )
+                        .path(
+                                request.getRequestURI()
+                        )
+                        .build();
+
+        return ResponseEntity
+                .status(
+                        HttpStatus.INTERNAL_SERVER_ERROR
+                )
                 .body(response);
     }
 
