@@ -24,93 +24,245 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.util.List;
 
-// @Profile("dev") // It means this particular config. will get applied on the 'dev' profile server...
-@Configuration// Marks this class as a Spring configuration class, so Spring will read it and create beans defined here...
-@EnableWebSecurity// Enables Spring Security’s web security support and allows you to customize the security configuration for your application...
-@EnableMethodSecurity // Without @EnableMethodSecurity, Spring will ignore every @PreAuthorize.
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
-public class SecurityConfig { // This 'SecurityConfig' class controls how your entire application handles authentication and authorization...
+public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
+    private final GoogleOAuth2FailureHandler googleOAuth2FailureHandler;
+    private final UserDetailsServiceImpl userDetails;
 
     @Value("${app.cors.allowed-origin}")
     private String allowedOrigin;
 
-    // Here we will be start customizing our Spring Security...
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {  // We will be using the 'HttpSecurity' instance to appy all the required filters on our spring security...
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http
+    ) throws Exception {
+
         return http
-                .cors(Customizer.withDefaults()) // enable CORS in SecurityFilterChain...
-                .csrf(AbstractHttpConfigurer::disable) // Disables CSRF protection,CSRF is useful for browser sessions but often disabled in APIs for simplicity...
-                .authorizeHttpRequests(request -> request // 'authorizeHttpRequests()' tells the spring to start authorizing the requests...
-                        .requestMatchers("/api/v1/journals/**", "/api/v1/users/**", "/api/v1/weather/**").authenticated() // Only users who are logged in can access endpoints starting with /journals/ or /users/...
-                        .requestMatchers("/api/v1/admin/**").hasRole(Role.ADMIN.name()) // Only users who are logged in can access endpoints starting with /admin/ and has roles "ADMIN" ...
-                        .anyRequest().permitAll())// All other endpoints are accessible without login...
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class) // applying filter before everytime we do userName and password authentication...
-                .build(); // Builds the SecurityFilterChain bean that Spring Security uses to secure your app...
+
+                /*
+                 * ----------------------------------------
+                 * CORS
+                 * ----------------------------------------
+                 */
+                .cors(
+                        Customizer.withDefaults()
+                )
+
+                /*
+                 * ----------------------------------------
+                 * CSRF
+                 * ----------------------------------------
+                 *
+                 * Your current authentication API is JWT-based,
+                 * so we continue with your existing configuration
+                 * for this phase.
+                 */
+                .csrf(
+                        AbstractHttpConfigurer::disable
+                )
+
+                /*
+                 * ----------------------------------------
+                 * AUTHORIZATION
+                 * ----------------------------------------
+                 */
+                .authorizeHttpRequests(
+                        request -> request
+
+                                /*
+                                 * --------------------------------
+                                 * Existing public authentication
+                                 * endpoints
+                                 * --------------------------------
+                                 */
+                                .requestMatchers(
+                                        "/api/v1/auth/**",
+                                        "/api/v1/public/**"
+                                )
+                                .permitAll()
+
+                                /*
+                                 * --------------------------------
+                                 * OAuth2 login endpoints
+                                 * --------------------------------
+                                 *
+                                 * These must be reachable before
+                                 * the user has authenticated.
+                                 */
+                                .requestMatchers(
+                                        "/oauth2/**",
+                                        "/login/oauth2/**"
+                                )
+                                .permitAll()
+
+                                /*
+                                 * --------------------------------
+                                 * Existing protected APIs
+                                 * --------------------------------
+                                 */
+                                .requestMatchers(
+                                        "/api/v1/journals/**",
+                                        "/api/v1/users/**",
+                                        "/api/v1/weather/**"
+                                )
+                                .authenticated()
+
+                                /*
+                                 * --------------------------------
+                                 * Admin APIs
+                                 * --------------------------------
+                                 */
+                                .requestMatchers(
+                                        "/api/v1/admin/**"
+                                )
+                                .hasRole(
+                                        Role.ADMIN.name()
+                                )
+
+                                /*
+                                 * --------------------------------
+                                 * Everything else
+                                 * --------------------------------
+                                 */
+                                .anyRequest()
+                                .permitAll()
+                )
+
+                /*
+                 * ----------------------------------------
+                 * GOOGLE OAUTH2 LOGIN
+                 * ----------------------------------------
+                 */
+                .oauth2Login(
+                        oauth2 -> oauth2
+                                .successHandler(
+                                        googleOAuth2SuccessHandler
+                                )
+                                .failureHandler(
+                                        googleOAuth2FailureHandler
+                                )
+                )
+
+                /*
+                 * ----------------------------------------
+                 * EXISTING JWT AUTHENTICATION
+                 * ----------------------------------------
+                 *
+                 * IMPORTANT:
+                 * We keep your existing JWT filter.
+                 */
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
+
+                .build();
     }
 
-    // We’re injecting our own implementation of UserDetailsService (which loads users from your database)...
-    // This is how Spring Security knows where to fetch user details (username, password, roles, etc.) when someone tries to log in...
-    private final UserDetailsServiceImpl userDetails;
-
-    // This method used for matching the users details (that is sent in basic auth like: password & userName) with the details of that particular user stored in our dataBase...
-    // We will be integrating our 'UserDetailsServiceImpl' in our spring security with the help of this method...
+    /*
+     * ----------------------------------------
+     * PASSWORD AUTHENTICATION
+     * ----------------------------------------
+     */
     @Bean
-    public DaoAuthenticationProvider configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-        // 'DaoAuthenticationProvider' is a built-in provider that checks username/password against a database (or any userDetails)...
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+    public DaoAuthenticationProvider configureGlobal(
+            AuthenticationManagerBuilder auth
+    ) throws Exception {
 
-        authProvider.setUserDetailsService(userDetails); // → Uses your custom service (here: by the name of the user) to fetch user data ...
-        authProvider.setPasswordEncoder(passwordEncoder()); // → Uses BCrypt hashing to check passwords...
+        DaoAuthenticationProvider authProvider =
+                new DaoAuthenticationProvider();
 
-        return authProvider; // Returning this bean registers it with Spring Security so authentication works...
+        authProvider.setUserDetailsService(
+                userDetails
+        );
+
+        authProvider.setPasswordEncoder(
+                passwordEncoder()
+        );
+
+        return authProvider;
     }
 
+    /*
+     * ----------------------------------------
+     * PASSWORD ENCODER
+     * ----------------------------------------
+     */
     @Bean
-    // Creates a BCryptPasswordEncoder bean, which is used to hash passwords securely in your database...
-    // Whenever a password is checked during login, Spring will hash the input password and compare it with the stored hash...
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /*
+     * ----------------------------------------
+     * AUTHENTICATION MANAGER
+     * ----------------------------------------
+     */
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration auth) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration auth
+    ) throws Exception {
+
         return auth.getAuthenticationManager();
     }
 
+    /*
+     * ----------------------------------------
+     * CORS
+     * ----------------------------------------
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration = new CorsConfiguration();
+        CorsConfiguration configuration =
+                new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(allowedOrigin));
+        configuration.setAllowedOrigins(
+                List.of(allowedOrigin)
+        );
 
-        configuration.setAllowedMethods(List.of(
-                "GET",
-                "POST",
-                "PUT",
-                "DELETE",
-                "PATCH",
-                "OPTIONS"
-        ));
+        configuration.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "PATCH",
+                        "OPTIONS"
+                )
+        );
 
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(
+                List.of("*")
+        );
 
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(
+                true
+        );
 
         configuration.setExposedHeaders(
-                List.of(HttpHeaders.CONTENT_DISPOSITION)
+                List.of(
+                        HttpHeaders.CONTENT_DISPOSITION
+                )
         );
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
 
         return source;
     }
-
 }

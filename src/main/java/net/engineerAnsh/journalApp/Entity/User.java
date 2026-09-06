@@ -1,6 +1,7 @@
 package net.engineerAnsh.journalApp.Entity;
 
 import lombok.*;
+import net.engineerAnsh.journalApp.enums.AuthProvider;
 import net.engineerAnsh.journalApp.enums.Role;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.CreatedDate;
@@ -9,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,9 +28,13 @@ public class User {
     @NonNull
     private String username;
 
-    @NonNull
+    /**
+     * Password is required for LOCAL accounts.
+     * It is null for GOOGLE accounts.
+     */
     private String password;
 
+    @Indexed(unique = true)
     private String email;
 
     private boolean sentimentAnalysis;
@@ -37,9 +43,9 @@ public class User {
 
     private List<Role> roles;
 
-    // '@DBRef' Stands for Database Reference And it Creates a relationship (link) between this User document and another collection (Journal)...
-    // It means this 'journalEntries' arrayList will hold the reference of the 'journal_entries' that are present in the Journal...
-    // After writing 'DBRef' the parent-child relationship will get established...
+    /**
+     * User's journal references.
+     */
     @DBRef
     private List<Journal> journals;
 
@@ -53,4 +59,22 @@ public class User {
 
     private String profileImagePublicId;
 
+    /**
+     * Authentication provider used by this account.
+     *
+     * LOCAL  -> username/password authentication
+     * GOOGLE -> Google OAuth2/OIDC authentication
+     */
+    @Builder.Default
+    private AuthProvider authProvider =
+            AuthProvider.LOCAL;
+
+    /**
+     * Google's stable OIDC subject identifier.
+     *
+     * Null for LOCAL accounts.
+     * Populated for GOOGLE accounts.
+     */
+    @Indexed(unique = true, sparse = true)
+    private String googleSubject;
 }
